@@ -1,0 +1,54 @@
+server:
+  port: 8082  # Port for the server to run on
+
+spring:
+  application:
+    name: store-service1  # Name of the application
+
+  kafka:
+    bootstrap-servers: ENTRA-184:9092  # Kafka bootstrap servers
+    # Uncomment to use Kafka consumer settings:
+    # consumer:
+    #   group-id: store-service-group  # Consumer group ID
+    #   auto-offset-reset: latest  # Offset reset strategy
+    #   key-deserializer: org.apache.kafka.common.serialization.StringDeserializer  # Key deserializer
+    #   value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer  # Value deserializer
+    #   properties:
+    #     spring.json.trusted.packages: "*"  # Allow all packages for deserialization
+
+  # Uncomment and configure below for JDBC DataSource and JPA settings if necessary:
+  # datasource:
+  #   url: jdbc:sqlserver://localhost;Database=payment-fraud;encrypt=false;IntegratedSecurity=true
+  #   driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  #   username:  # Leave empty for Windows Authentication
+  #   password:  # Leave empty for Windows Authentication
+
+  # JPA/Hibernate settings:
+  #   jpa:
+  #     database-platform: org.hibernate.dialect.SQLServerDialect
+  #     hibernate:
+  #       ddl-auto: update  # Automatically update the database schema
+  #     show-sql: true  # Show SQL queries in the log
+  #     properties:
+  #       hibernate.format_sql: true  # Format SQL for better readability
+
+  # Hibernate settings:
+  #   jpa:
+  #     properties:
+  #       hibernate.hbm2ddl.auto: update  # Auto-update Hibernate schema
+
+  # In-memory H2 Database configuration (uncomment if needed):
+  datasource:
+    url: jdbc:h2:mem:testdb  # In-memory H2 database
+    driver-class-name: org.h2.Driver
+    username: sa  # Default username for H2
+    password:  # Default empty password for H2
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect  # H2 dialect for JPA
+    h2:
+      console:
+        enabled: true  # Enable H2 console for database inspection
+    hibernate:
+      ddl-auto: update  # Automatically update the schema in H2
+
