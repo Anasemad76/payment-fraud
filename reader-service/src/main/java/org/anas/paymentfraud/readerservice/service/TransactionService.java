@@ -19,7 +19,7 @@ public class TransactionService {
     public boolean sendTransaction(Transaction transaction) {
         try {
 
-            kafkaTemplate.send("transaction-topic", transaction);
+            kafkaTemplate.send("transaction-topic", transaction.getCustomer_id(),transaction);
             System.out.println("Sending transaction: " + transaction);
             return true;
         }catch (Exception e) {
