@@ -170,14 +170,14 @@ public class CustomerProfilingProcessor {
 
         // Suppress updates to emit one record per customer
 
-        profilingTable
-                .toStream()
-                .groupByKey(Grouped.with(Serdes.String(), profilingSerde))
-                .reduce((v1, v2) -> v2, Materialized.<String, Profiling, KeyValueStore<Bytes, byte[]>>as("profiling-final")
-                        .withKeySerde(Serdes.String())
-                        .withValueSerde(profilingSerde))
-                .toStream()
-                .foreach((k, v) -> System.out.println("Profiling: " + k + " " + v));
+//        profilingTable
+//                .toStream()
+//                .groupByKey(Grouped.with(Serdes.String(), profilingSerde))
+//                .reduce((v1, v2) -> v2, Materialized.<String, Profiling, KeyValueStore<Bytes, byte[]>>as("profiling-final")
+//                        .withKeySerde(Serdes.String())
+//                        .withValueSerde(profilingSerde))
+//                .toStream()
+//                .foreach((k, v) -> System.out.println("Profiling: " + k + " " + v));
 ////                .to("customer-profiles-topic", Produced.with(Serdes.String(), profilingSerde));
 
         KStream<String, Profiling> resultStream = profilingTable.toStream();
