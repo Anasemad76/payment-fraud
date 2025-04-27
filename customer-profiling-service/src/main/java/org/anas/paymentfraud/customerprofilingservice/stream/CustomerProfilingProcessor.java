@@ -3,6 +3,7 @@ package org.anas.paymentfraud.customerprofilingservice.stream;
 import org.anas.paymentfraud.customerprofilingservice.config.JsonSerde;
 import org.anas.paymentfraud.customerprofilingservice.model.Profiling;
 import org.anas.paymentfraud.customerprofilingservice.model.Transaction;
+import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
@@ -12,6 +13,9 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.util.Arrays;
 
+import org.apache.kafka.common.utils.Bytes;
+import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.kstream.Materialized;
 @Component
 public class CustomerProfilingProcessor {
 
@@ -68,38 +72,45 @@ public class CustomerProfilingProcessor {
         KTable<String, Long> threeHourCounts  = aggregateWindowedCount(stream, Duration.ofHours(3));
         KTable<String, Long> oneDayCounts     = aggregateWindowedCount(stream, Duration.ofDays(1));
 
+//        // 2. Convert each KTable into KStream
+//        KStream<String, Long> oneMinStream    = oneMinCounts.toStream();
+//        KStream<String, Long> tenMinStream    = tenMinCounts.toStream();
+//        KStream<String, Long> oneHourStream   = oneHourCounts.toStream();
+//        KStream<String, Long> threeHourStream = threeHourCounts.toStream();
+//        KStream<String, Long> oneDayStream    = oneDayCounts.toStream();
 
-        KTable<String, Profiling> profilingTable = oneMinCounts.join(
-                tenMinCounts,
-                (oneMin, tenMin) -> {
-                    Profiling profiling = new Profiling();
-                    profiling.setTrxCountLastMinute(oneMin != null ? oneMin.intValue() : 0);
-                    profiling.setTrxCountLast10Minutes(tenMin != null ? tenMin.intValue() : 0);
-                    return profiling;
-                }
-        ).join(
-                oneHourCounts,
-                (profiling, oneHour) -> {
-                    profiling.setTrxCountLastHour(oneHour != null ? oneHour.intValue() : 0);
-                    return profiling;
-                }
-        ).join(
-                threeHourCounts,
-                (profiling, threeHour) -> {
-                    profiling.setTrxCountLast3Hours(threeHour != null ? threeHour.intValue() : 0);
-                    return profiling;
-                }
-        ).join(
-                oneDayCounts,
-                (profiling, oneDay) -> {
-                    profiling.setTrxCountLast24Hours(oneDay != null ? oneDay.intValue() : 0);
-                    return profiling;
-                }
-        );
 
-        profilingTable.toStream().foreach((k, v) -> {
-            System.out.println("Profiling: " + k + " " + v);
-        });
+//        KTable<String, Profiling> profilingTable = oneMinCounts.join(
+//                tenMinCounts,
+//                (oneMin, tenMin) -> {
+//                    Profiling profiling = new Profiling();
+//                    profiling.setTrxCountLastMinute(oneMin != null ? oneMin.intValue() : 0);
+//                    profiling.setTrxCountLast10Minutes(tenMin != null ? tenMin.intValue() : 0);
+//                    return profiling;
+//                }
+//        ).join(
+//                oneHourCounts,
+//                (profiling, oneHour) -> {
+//                    profiling.setTrxCountLastHour(oneHour != null ? oneHour.intValue() : 0);
+//                    return profiling;
+//                }
+//        ).join(
+//                threeHourCounts,
+//                (profiling, threeHour) -> {
+//                    profiling.setTrxCountLast3Hours(threeHour != null ? threeHour.intValue() : 0);
+//                    return profiling;
+//                }
+//        ).join(
+//                oneDayCounts,
+//                (profiling, oneDay) -> {
+//                    profiling.setTrxCountLast24Hours(oneDay != null ? oneDay.intValue() : 0);
+//                    return profiling;
+//                }
+//        ).filter((key, profiling) -> profiling.isComplete());
+//
+//        profilingTable.toStream().foreach((k, v) -> {
+//            System.out.println("Profiling: " + k + " " + v);
+//        });
 
 
         //verify in console
@@ -117,13 +128,62 @@ public class CustomerProfilingProcessor {
 
 
 
-        KStream<String, Profiling> profilingStream = profilingTable.toStream();
+//        KStream<String, Profiling> profilingStream = profilingTable.toStream();
+//
+//        // Send to Kafka topic
+//        profilingStream.to("customer-profile", Produced.with(Serdes.String(), new JsonSerde<>(Profiling.class)));
+//
+//        // Return the stream (for testing or further processing)
+//        return profilingStream;
 
-        // Send to Kafka topic
-        profilingStream.to("customer-profile", Produced.with(Serdes.String(), new JsonSerde<>(Profiling.class)));
 
-        // Return the stream (for testing or further processing)
-        return profilingStream;
+
+        // Join KTables to build Profiling
+        JsonSerde<Profiling> profilingSerde = new JsonSerde<>(Profiling.class);
+        KTable<String, Profiling> profilingTable = oneMinCounts
+                .join(tenMinCounts,
+                        (oneMin, tenMin) -> {
+                            Profiling profiling = new Profiling();
+                            profiling.setTrxCountLastMinute(oneMin != null ? oneMin.intValue() : 0);
+                            profiling.setTrxCountLast10Minutes(tenMin != null ? tenMin.intValue() : 0);
+                            return profiling;
+                        },
+                        Materialized.with(Serdes.String(), profilingSerde))
+                .join(oneHourCounts,
+                        (profiling, oneHour) -> {
+                            profiling.setTrxCountLastHour(oneHour != null ? oneHour.intValue() : 0);
+                            return profiling;
+                        },
+                        Materialized.with(Serdes.String(), profilingSerde))
+                .join(threeHourCounts,
+                        (profiling, threeHour) -> {
+                            profiling.setTrxCountLast3Hours(threeHour != null ? threeHour.intValue() : 0);
+                            return profiling;
+                        },
+                        Materialized.with(Serdes.String(), profilingSerde))
+                .join(oneDayCounts,
+                        (profiling, oneDay) -> {
+                            profiling.setTrxCountLast24Hours(oneDay != null ? oneDay.intValue() : 0);
+                            return profiling;
+                        },
+                        Materialized.with(Serdes.String(), profilingSerde));
+
+        // Suppress updates to emit one record per customer
+
+        profilingTable
+                .toStream()
+                .groupByKey(Grouped.with(Serdes.String(), profilingSerde))
+                .reduce((v1, v2) -> v2, Materialized.<String, Profiling, KeyValueStore<Bytes, byte[]>>as("profiling-final")
+                        .withKeySerde(Serdes.String())
+                        .withValueSerde(profilingSerde))
+                .toStream()
+                .foreach((k, v) -> System.out.println("Profiling: " + k + " " + v));
+////                .to("customer-profiles-topic", Produced.with(Serdes.String(), profilingSerde));
+
+        KStream<String, Profiling> resultStream = profilingTable.toStream();
+        resultStream.to("customer-profile", Produced.with(Serdes.String(), profilingSerde));
+        return resultStream;
+
 
 
 
