@@ -9,7 +9,7 @@ import org.springframework.kafka.config.TopicBuilder;
 public class OutputTopic {
 
     @Bean
-    public NewTopic wordCounterTopic() {
+    public NewTopic customerProfilingTopic() {
         return TopicBuilder.name("customer-profile")
                 .partitions(1)
                 .replicas(1)

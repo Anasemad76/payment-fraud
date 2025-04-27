@@ -16,6 +16,9 @@ import java.util.Arrays;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.kstream.Materialized;
+
+import static org.anas.paymentfraud.customerprofilingservice.stream.ProfilingHelper.updateProfiling;
+
 @Component
 public class CustomerProfilingProcessor {
 
@@ -53,16 +56,17 @@ public class CustomerProfilingProcessor {
             System.out.println("ClientId: " + k + " Total: " + v);
         });
 
-//        profilingKStream<String, Double> customerTotals2=stream
-//                .groupByKey()
-//                .aggregate(
-//                        Profiling::new,
-//                        (clientIdKey,transaction,aggregate)->aggregate.setTotalAmount(transaction.getAmount()),
-//                        Materialized.with(Serdes.String(),new JsonSerde<>(Profiling.class)) // stores data in disk
-//                          .toStream();
-//        profilingKStream.mapValues((readOnlykey,profiling)->profiling.getlastestTransaction())
-//        .filter((key,value)->value.getState().equals(bankState.REJECTED)
-//        .to(rejected-transaction-topic)
+
+
+        KTable<String, Profiling> profilingTablev2 = stream
+                .groupByKey()
+                .aggregate( // aggregate is stateful
+                        Profiling::new, // only if no old profiling exists for this key
+                        (key, txn, profiling) -> ProfilingHelper.updateProfiling(profiling, txn),
+                        Materialized.with(Serdes.String(), new JsonSerde<>(Profiling.class))
+                );
+
+
 
 
         // aggregate counts of 1 min window
@@ -71,72 +75,6 @@ public class CustomerProfilingProcessor {
         KTable<String, Long> oneHourCounts    = aggregateWindowedCount(stream, Duration.ofHours(1));
         KTable<String, Long> threeHourCounts  = aggregateWindowedCount(stream, Duration.ofHours(3));
         KTable<String, Long> oneDayCounts     = aggregateWindowedCount(stream, Duration.ofDays(1));
-
-//        // 2. Convert each KTable into KStream
-//        KStream<String, Long> oneMinStream    = oneMinCounts.toStream();
-//        KStream<String, Long> tenMinStream    = tenMinCounts.toStream();
-//        KStream<String, Long> oneHourStream   = oneHourCounts.toStream();
-//        KStream<String, Long> threeHourStream = threeHourCounts.toStream();
-//        KStream<String, Long> oneDayStream    = oneDayCounts.toStream();
-
-
-//        KTable<String, Profiling> profilingTable = oneMinCounts.join(
-//                tenMinCounts,
-//                (oneMin, tenMin) -> {
-//                    Profiling profiling = new Profiling();
-//                    profiling.setTrxCountLastMinute(oneMin != null ? oneMin.intValue() : 0);
-//                    profiling.setTrxCountLast10Minutes(tenMin != null ? tenMin.intValue() : 0);
-//                    return profiling;
-//                }
-//        ).join(
-//                oneHourCounts,
-//                (profiling, oneHour) -> {
-//                    profiling.setTrxCountLastHour(oneHour != null ? oneHour.intValue() : 0);
-//                    return profiling;
-//                }
-//        ).join(
-//                threeHourCounts,
-//                (profiling, threeHour) -> {
-//                    profiling.setTrxCountLast3Hours(threeHour != null ? threeHour.intValue() : 0);
-//                    return profiling;
-//                }
-//        ).join(
-//                oneDayCounts,
-//                (profiling, oneDay) -> {
-//                    profiling.setTrxCountLast24Hours(oneDay != null ? oneDay.intValue() : 0);
-//                    return profiling;
-//                }
-//        ).filter((key, profiling) -> profiling.isComplete());
-//
-//        profilingTable.toStream().foreach((k, v) -> {
-//            System.out.println("Profiling: " + k + " " + v);
-//        });
-
-
-        //verify in console
-//        oneMinCounts.toStream().foreach((k,v)->{
-//
-//            System.out.println("One min window key : "+k+" count: " + v);
-//        });
-//        tenMinCounts.toStream().foreach((k,v)->{
-//            System.out.println("Ten min window key : "+k+" count: " + v);
-//        });
-
-//        oneHourCounts.toStream().foreach((k,v)->{
-//            System.out.println("window key : "+k+" count: " + v);
-//        });
-
-
-
-//        KStream<String, Profiling> profilingStream = profilingTable.toStream();
-//
-//        // Send to Kafka topic
-//        profilingStream.to("customer-profile", Produced.with(Serdes.String(), new JsonSerde<>(Profiling.class)));
-//
-//        // Return the stream (for testing or further processing)
-//        return profilingStream;
-
-
 
         // Join KTables to build Profiling
         JsonSerde<Profiling> profilingSerde = new JsonSerde<>(Profiling.class);
@@ -166,26 +104,45 @@ public class CustomerProfilingProcessor {
                             profiling.setTrxCountLast24Hours(oneDay != null ? oneDay.intValue() : 0);
                             return profiling;
                         },
-                        Materialized.with(Serdes.String(), profilingSerde));
+                        Materialized.with(Serdes.String(), profilingSerde))
 
-        // Suppress updates to emit one record per customer
+                .join(profilingTablev2,
+                        (profiling, eventProfiling) -> {
 
+
+                            // Set timestamps (from profilingTablev2)
+                            profiling.setLast_debit_date(eventProfiling.getLast_debit_date());
+                            profiling.setLast_credit_date(eventProfiling.getLast_credit_date());
+                            profiling.setLast_time_using_type(eventProfiling.getLast_time_using_type());
+                            profiling.setLast_time_using_credit(eventProfiling.getLast_time_using_credit());
+                            profiling.setTrx_count_since_last_credit(eventProfiling.getTrx_count_since_last_credit());
+
+                            return profiling;
+                        },
+                        Materialized.with(Serdes.String(), new JsonSerde<>(Profiling.class))
+                );
+
+
+//
+//        // Suppress updates to emit one record per customer
 //        profilingTable
 //                .toStream()
 //                .groupByKey(Grouped.with(Serdes.String(), profilingSerde))
 //                .reduce((v1, v2) -> v2, Materialized.<String, Profiling, KeyValueStore<Bytes, byte[]>>as("profiling-final")
 //                        .withKeySerde(Serdes.String())
 //                        .withValueSerde(profilingSerde))
-//                .toStream()
-//                .foreach((k, v) -> System.out.println("Profiling: " + k + " " + v));
-////                .to("customer-profiles-topic", Produced.with(Serdes.String(), profilingSerde));
+//                .toStream();
+////                .foreach((k, v) -> System.out.println("Profiling: " + k + " " + v));
+//////                .to("customer-profiles-topic", Produced.with(Serdes.String(), profilingSerde));
+
+
+
+//
+
 
         KStream<String, Profiling> resultStream = profilingTable.toStream();
         resultStream.to("customer-profile", Produced.with(Serdes.String(), profilingSerde));
         return resultStream;
-
-
-
 
     }
 }
