@@ -18,10 +18,12 @@ public class TransactionService {
 
     public boolean sendTransaction(Transaction transaction) {
         try {
-
-            kafkaTemplate.send("transaction-topic", transaction.getCustomer_id(),transaction);
-            System.out.println("Sending transaction: " + transaction);
+            for (int i = 0; i < 10; i++) {
+                kafkaTemplate.send("transaction-topic", transaction.getCustomer_id()+i,transaction);
+                System.out.println("Sending transaction: " + transaction);
+            }
             return true;
+
         }catch (Exception e) {
             e.printStackTrace();
             return false;

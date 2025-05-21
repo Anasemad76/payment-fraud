@@ -1,0 +1,19 @@
+#spring:
+#  application:
+#    name: kafkastream
+#  kafka:
+#    bootstrap-servers: ENTRA-184:9092
+#    producer:
+#      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+#      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+#    consumer:
+#      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+#      value-deserializer: org.apache.kafka.common.serialization.LongDeserializer
+#      group-id: logger-group
+spring:
+  kafka:
+    bootstrap-servers: ENTRA-184:9092
+    streams:
+      application-id: customer-profiling-app
+      default-key-serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+      default-value-serde: org.apache.kafka.common.serialization.Serdes$StringSerde

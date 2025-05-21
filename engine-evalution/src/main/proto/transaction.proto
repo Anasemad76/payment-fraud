@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package transaction;
+
+// Transaction frequency data used for prediction
+message TransactionFrequency {
+  string customer_id = 1;    // Unique identifier of the customer
+  uint32 trx_1m = 2;         // Transactions in the past 1 minute
+  uint32 trx_10m = 3;        // Transactions in the past 10 minutes
+  uint32 trx_1h = 4;         // Transactions in the past 1 hour
+  uint32 trx_3h = 5;         // Transactions in the past 3 hours
+  uint32 trx_24h = 6;        // Transactions in the past 24 hours
+}
+
+// Result of transaction-based prediction
+message PredictionResult {
+  string customer_id = 1;           // Echoed Customer ID
+  bool is_transaction_legit = 2;    // True if prediction indicates non-fraudulent behavior
+}
+
+// Service definition for transaction prediction
+service TransactionService {
+  rpc Predict (TransactionFrequency) returns (PredictionResult);
+}

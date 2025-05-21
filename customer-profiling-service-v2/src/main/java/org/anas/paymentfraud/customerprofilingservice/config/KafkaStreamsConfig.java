@@ -34,7 +34,7 @@ public class KafkaStreamsConfig {
         return new KafkaStreamsConfiguration(buildStreamProperties());}
     private Map<String, Object> buildStreamProperties() {
         Map<String, Object> props = new HashMap<>();    // Core configuration
-        props.put(APPLICATION_ID_CONFIG, "customer-profiling-app-v33"); // acts like a group id
+        props.put(APPLICATION_ID_CONFIG, "customer-profiling-app-v55"); // acts like a group id
         props.put(BOOTSTRAP_SERVERS_CONFIG,"ENTRA-184:9092");
 //        props.put(STATE_DIR_CONFIG, stateDir);
         // Serde configuration
@@ -42,16 +42,19 @@ public class KafkaStreamsConfig {
         // Json Transaction Serde
         props.put(DEFAULT_VALUE_SERDE_CLASS_CONFIG, JsonSerde.class.getName());
 
-        // Processing configuration
+        // Processing configuration(Batching)
 //        props.put(NUM_STREAM_THREADS_CONFIG, 2);
-        props.put(CACHE_MAX_BYTES_BUFFERING_CONFIG,10485760);
-        props.put(COMMIT_INTERVAL_MS_CONFIG, 1000);
+        props.put(CACHE_MAX_BYTES_BUFFERING_CONFIG,10485760); // cache in memory before flushing and wiriting to rocksdb and changelog
+        props.put(COMMIT_INTERVAL_MS_CONFIG, 1000); // if cache size is still small , flush after certain interval
+
 
         // Reliability configuration
           props.put(DEFAULT_DESERIALIZATION_EXCEPTION_HANDLER_CLASS_CONFIG,"org.apache.kafka.streams.errors.LogAndContinueExceptionHandler");
-          props.put(NUM_STANDBY_REPLICAS_CONFIG, 1);    props.put(REPLICATION_FACTOR_CONFIG, 1);
-          props.put(AUTO_OFFSET_RESET_CONFIG, "latest");
-          // Monitoring configuration
+          props.put(NUM_STANDBY_REPLICAS_CONFIG, 1); // a standby instance of kafka stream app must be created inorder for this to work
+          props.put(REPLICATION_FACTOR_CONFIG, 1);
+          props.put(AUTO_OFFSET_RESET_CONFIG, "latest"); //tells what to do when there is no valid-committed offset for a partition
+
+        // Monitoring configuration
          props.put(METRICS_RECORDING_LEVEL_CONFIG, "INFO");
 
         // PERFORMANCE TUNING

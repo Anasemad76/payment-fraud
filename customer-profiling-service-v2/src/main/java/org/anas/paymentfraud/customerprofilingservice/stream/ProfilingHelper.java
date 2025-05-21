@@ -10,7 +10,7 @@ import java.time.format.DateTimeFormatter;
 public class ProfilingHelper {
 
     public static Profiling updateProfiling(Profiling profiling, Transaction txn){
-
+        profiling.setTotalTxAmount(profiling.getTotalTxAmount() + txn.getAmount());
 
         LocalDate txnDate = LocalDate.parse(txn.getTransactionDate().substring(0,10));
         if(txn.getPaymentMethod().equalsIgnoreCase("debit card")){

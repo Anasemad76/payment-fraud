@@ -1,0 +1,81 @@
+lowercaseOutputName: true
+
+rules:
+  # Kafka Consumer Metrics (consumer-metrics)
+  - pattern: 'kafka.consumer<type=consumer-metrics, client-id=(.+), name=(.+)><>Value'
+    name: kafka_consumer_$2
+    labels:
+      client_id: "$1"
+    help: "Kafka consumer metric $2 for client $1"
+    type: GAUGE
+
+  # Kafka Consumer App Info
+  - pattern: 'kafka.consumer<type=app-info, client-id=(.+)><>start-time-ms'
+    name: kafka_consumer_start_time_seconds
+    labels:
+      clientId: "$1"
+    help: "Kafka consumer start time in seconds"
+    type: GAUGE
+    valueFactor: 0.001
+
+  - pattern: 'kafka.consumer<type=app-info, client-id=(.+)><>(commit-id|version): (.+)'
+    name: kafka_consumer_$2_info
+    value: 1
+    labels:
+      clientId: "$1"
+      $2: "$3"
+    help: "Kafka consumer version and commit-id"
+    type: GAUGE
+
+  # Generic metric rule
+  - pattern: 'kafka.consumer<type=consumer-metrics, client-id=(.+)><>(.+-total|.+-avg|.+-rate|.+-count)><>Value'
+    name: kafka_consumer_$2
+    labels:
+      client_id: "$1"
+    help: "Kafka consumer metric $2"
+    type: GAUGE
+
+  # Topic-level metrics
+  - pattern: 'kafka.consumer<type=consumer-fetch-manager-metrics,client-id=(.+),topic=(.+),name=(bytes-consumed-total|bytes-consumed-rate|records-consumed-rate|fetch-size-max|records-consumed-total|fetch-size-avg|records-per-request-avg)><>Value'
+    name: kafka_consumer_$3
+    labels:
+      client_id: "$1"
+      topic: "$2"
+    help: "Kafka consumer topic-level metric $3"
+    type: GAUGE
+
+  # Partition-level metrics
+  - pattern: 'kafka.consumer<type=consumer-fetch-manager-metrics,client-id=(.+),topic=(.+),partition=(.+),name=(records-lag-max|records-lag|records-lag-avg|preferred-read-replica|records-lead-min|records-lead-avg|records-lead)><>Value'
+    name: kafka_consumer_$4
+    labels:
+      client_id: "$1"
+      topic: "$2"
+      partition: "$3"
+    help: "Kafka consumer partition-level metric $4"
+    type: GAUGE
+
+  # Topic-specific fetch rate
+  - pattern: 'kafka.consumer<type=consumer-fetch-manager-metrics,client-id=(.+),topic=(.+),name=fetch-rate><>Value'
+    name: kafka_consumer_fetch_rate
+    labels:
+      client_id: "$1"
+      topic: "$2"
+    help: "Kafka consumer fetch rate per topic"
+    type: GAUGE
+
+  # General fetch rate
+  - pattern: 'kafka.consumer<type=consumer-fetch-manager-metrics,client-id=(.+),name=fetch-rate><>Value'
+    name: kafka_consumer_fetch_rate
+    labels:
+      client_id: "$1"
+    help: "Kafka consumer fetch rate"
+    type: GAUGE
+
+  # Catch-all rule for all kafka.consumer metrics
+  - pattern: 'kafka.consumer<(.+)><>([^:]+)'
+    name: kafka_consumer_metric
+    labels:
+      attribute: "$2"
+      properties: "$1"
+    help: "Catch-all for unmatched Kafka consumer metrics"
+    type: GAUGE

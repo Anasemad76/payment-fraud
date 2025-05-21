@@ -1,11 +1,27 @@
 spring:
+  jmx:
+    enabled: true
   application:
     name: reader-service
   kafka:
     bootstrap-servers: ENTRA-184:9092
     producer:
+      client-id: reader-producer
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
 server:
   port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "metrics"  # Expose the metrics endpoint
+  endpoint:
+    metrics:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true

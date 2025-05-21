@@ -26,17 +26,17 @@ public class CustomerProfilingProcessor {
 
         return stream
                 .groupByKey()
-                .windowedBy(TimeWindows.of(duration))
-                .count()
+                .windowedBy(TimeWindows.of(duration)) // repartition happens
+                .count()//state store and changelog happens
                 .toStream((windowedKey, value) -> windowedKey.key())
-                .groupByKey()
+                .groupByKey() // repartition happens
                 .reduce((oldVal, newVal) -> newVal);
     }
 
 
     @Bean
     public KStream<String, Profiling> kStream(StreamsBuilder builder) {
-        KStream<String, Transaction> stream = builder.stream("transaction-topic",
+        KStream<String, Transaction> stream = builder.stream("transaction-topic-3p",
                 Consumed.with(Serdes.String(), new JsonSerde<>(Transaction.class)));
 
         stream.foreach((k, v) -> {
@@ -85,28 +85,32 @@ public class CustomerProfilingProcessor {
                             profiling.setTrxCountLastMinute(oneMin != null ? oneMin.intValue() : 0);
                             profiling.setTrxCountLast10Minutes(tenMin != null ? tenMin.intValue() : 0);
                             return profiling;
-                        },
-                        Materialized.with(Serdes.String(), profilingSerde))
+                        }
+                        ,Materialized.with(Serdes.String(), profilingSerde)
+                )
                 .join(oneHourCounts,
                         (profiling, oneHour) -> {
                             profiling.setTrxCountLastHour(oneHour != null ? oneHour.intValue() : 0);
                             return profiling;
-                        },
-                        Materialized.with(Serdes.String(), profilingSerde))
+                        }
+                        ,Materialized.with(Serdes.String(), profilingSerde)
+                        )
                 .join(threeHourCounts,
                         (profiling, threeHour) -> {
                             profiling.setTrxCountLast3Hours(threeHour != null ? threeHour.intValue() : 0);
                             return profiling;
-                        },
-                        Materialized.with(Serdes.String(), profilingSerde))
+                        }
+                        ,Materialized.with(Serdes.String(), profilingSerde)
+                )
                 .join(oneDayCounts,
                         (profiling, oneDay) -> {
                             profiling.setTrxCountLast24Hours(oneDay != null ? oneDay.intValue() : 0);
                             return profiling;
-                        },
-                        Materialized.with(Serdes.String(), profilingSerde))
+                        }
+                        ,Materialized.with(Serdes.String(), profilingSerde)
+                )
 
-                .join(profilingTablev2,
+                .join(profilingTablev2,  // async join (the problem)
                         (profiling, eventProfiling) -> {
 
 
@@ -118,31 +122,37 @@ public class CustomerProfilingProcessor {
                             profiling.setTrx_count_since_last_credit(eventProfiling.getTrx_count_since_last_credit());
 
                             return profiling;
-                        },
-                        Materialized.with(Serdes.String(), new JsonSerde<>(Profiling.class))
+                        }
+                        ,Materialized.with(Serdes.String(),profilingSerde)
                 );
 
 
 //
 //        // Suppress updates to emit one record per customer
-//        profilingTable
-//                .toStream()
-//                .groupByKey(Grouped.with(Serdes.String(), profilingSerde))
-//                .reduce((v1, v2) -> v2, Materialized.<String, Profiling, KeyValueStore<Bytes, byte[]>>as("profiling-final")
-//                        .withKeySerde(Serdes.String())
-//                        .withValueSerde(profilingSerde))
-//                .toStream();
-////                .foreach((k, v) -> System.out.println("Profiling: " + k + " " + v));
-//////                .to("customer-profiles-topic", Produced.with(Serdes.String(), profilingSerde));
+        KStream<String, Profiling> resultStream =profilingTable
+                .toStream()
+                .groupByKey(Grouped.with(Serdes.String(), profilingSerde))
+                .reduce((v1, v2) -> v2, Materialized.<String, Profiling, KeyValueStore<Bytes, byte[]>>as("profiling-final")
+                        .withKeySerde(Serdes.String())
+                        .withValueSerde(profilingSerde))
+                .toStream();
+//                .foreach((k, v) -> System.out.println("Profiling: " + k + " " + v));
+////                .to("customer-profiles-topic", Produced.with(Serdes.String(), profilingSerde));
+             resultStream.to("customer-profile", Produced.with(Serdes.String(), profilingSerde));
 
+        System.out.println("===== TOPOLOGY DESCRIPTION =====");
+        System.out.println(builder.build().describe());
+        System.out.println("===== END TOPOLOGY =====");
 
-
-//
-
-
-        KStream<String, Profiling> resultStream = profilingTable.toStream();
-        resultStream.to("customer-profile", Produced.with(Serdes.String(), profilingSerde));
         return resultStream;
+
+
+/// ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+//        KStream<String, Profiling> resultStream = profilingTable.toStream();
+//        resultStream.to("customer-profile", Produced.with(Serdes.String(), profilingSerde));
+//        return resultStream;
 
     }
 }

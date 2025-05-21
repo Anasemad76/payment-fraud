@@ -1,0 +1,15 @@
+startDelaySeconds: 0
+lowercaseOutputName: true
+rules:
+  # Kafka Consumer metrics
+  - pattern: 'kafka.consumer<type=consumer-fetch-manager-metrics, client-id=.*><>(records-lag|records-consumed-rate|bytes-consumed-rate)'
+
+  # Kafka Streams Thread-level metrics
+  - pattern: 'kafka.streams<type=stream-thread-metrics, thread-id=.*><>(records-consumed-rate|process-latency-avg|commit-latency-avg|poll-latency-avg|process-rate)'
+
+  # Kafka Streams Task-level metrics
+  - pattern: 'kafka.streams<type=stream-task-metrics, thread-id=.*?, task-id=.*?><>(records-processed-rate|process-latency-avg|commit-latency-avg|process-rate)'
+
+  # Optional: Global Streams info (like number of threads)
+  - pattern: 'kafka.streams<type=streams-metrics, client-id=.*?><>(.+)'
+

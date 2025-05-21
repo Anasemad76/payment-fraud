@@ -1,0 +1,11 @@
+ClientId: CUST9876512190121211 Total: 250.75
+Inside CONSUMER -> Profiling: Profiling(trxCountLastMinute=1, trxCountLast10Minutes=1, trxCountLastHour=1, trxCountLast3Hours=1, trxCountLast24Hours=1)
+
+ClientId: CUST9876512190121211 Total: 501.5
+Inside CONSUMER -> Profiling: Profiling(trxCountLastMinute=2, trxCountLast10Minutes=2, trxCountLastHour=2, trxCountLast3Hours=2, trxCountLast24Hours=2)
+
+ClientId: CUST9876512190121211 Total: 2758.25
+Inside CONSUMER -> Profiling: Profiling(trxCountLastMinute=6, trxCountLast10Minutes=11, trxCountLastHour=11, trxCountLast3Hours=11, trxCountLast24Hours=11)
+
+ClientId: CUST9876512190121211 Total: 3259.75
+Inside CONSUMER -> Profiling: Profiling(trxCountLastMinute=8, trxCountLast10Minutes=13, trxCountLastHour=13, trxCountLast3Hours=13, trxCountLast24Hours=13)

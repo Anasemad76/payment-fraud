@@ -1,0 +1,4 @@
+transaction_id,account_number,customer_id,amount,currency,payment_method,payment_type,transaction_date,country,city,merchant_name,status
+TXN202505120000,ACC53869582,Customer117647214431,100,AED,credit Card,Mobile Payment,2025-05-12T10:00:00Z,Egypt,Cairo,eBay,Pending
+TXN202505120000,ACC53869582,Customer117647214431,200,AED,credit Card,Mobile Payment,2025-05-12T10:00:00Z,Egypt,Cairo,eBay,Pending
+TXN202505120000,ACC53869582,Customer1176472144321,200,AED,debit Card,Mobile Payment,2025-05-12T10:00:00Z,Egypt,Cairo,eBay,Pending

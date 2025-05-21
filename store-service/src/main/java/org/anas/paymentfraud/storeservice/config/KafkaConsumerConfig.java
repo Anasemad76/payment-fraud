@@ -32,6 +32,22 @@ public class KafkaConsumerConfig {
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,deserializer);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+
+        //Minimum bytes to fetch
+        //This parameter sets the minimum number of bytes expected for a fetch
+        // response from a consumer. Increasing this also reduces the number of
+        // fetch requests made to Confluent Cloud, reducing the broker CPU overhead
+        // to process each fetch, thereby also improving throughput.
+        props.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, 1024 * 1024);
+
+
+        //there may be a resulting trade-off to higher latency when increasing this parameter on the consumer.
+        // This is because the broker won’t send the consumer new messages until
+        // the fetch request has enough messages to fulfill the size of the fetch request
+        // Wait up to 100ms to fill fetch
+        props.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, 100);
+
+
         return new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(), deserializer);
     }
     @Bean
